@@ -61,6 +61,7 @@ pub struct ModelClient {
     otel_manager: OtelManager,
     provider: ModelProviderInfo,
     conversation_id: ConversationId,
+    wire_session_id: ConversationId,
     effort: Option<ReasoningEffortConfig>,
     summary: ReasoningSummaryConfig,
     session_source: SessionSource,
@@ -77,6 +78,7 @@ impl ModelClient {
         effort: Option<ReasoningEffortConfig>,
         summary: ReasoningSummaryConfig,
         conversation_id: ConversationId,
+        wire_session_id: ConversationId,
         session_source: SessionSource,
     ) -> Self {
         Self {
@@ -86,6 +88,7 @@ impl ModelClient {
             otel_manager,
             provider,
             conversation_id,
+            wire_session_id,
             effort,
             summary,
             session_source,
@@ -259,8 +262,9 @@ impl ModelClient {
                 include: include.clone(),
                 prompt_cache_key: Some(conversation_id.clone()),
                 text: text.clone(),
+                max_output_tokens: self.config.model_max_output_tokens,
                 store_override: None,
-                conversation_id: Some(conversation_id.clone()),
+                conversation_id: Some(self.wire_session_id.to_string()),
                 session_source: Some(session_source.clone()),
                 extra_headers: beta_feature_headers(&self.config),
             };

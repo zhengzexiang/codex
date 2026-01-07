@@ -107,6 +107,9 @@ pub struct Config {
     /// Size of the context window for the model, in tokens.
     pub model_context_window: Option<i64>,
 
+    /// Maximum number of output tokens for the model.
+    pub model_max_output_tokens: Option<i64>,
+
     /// Token usage threshold triggering auto-compaction of conversation history.
     pub model_auto_compact_token_limit: Option<i64>,
 
@@ -678,6 +681,9 @@ pub struct ConfigToml {
 
     /// Size of the context window for the model, in tokens.
     pub model_context_window: Option<i64>,
+
+    /// Maximum number of output tokens for the model.
+    pub model_max_output_tokens: Option<i64>,
 
     /// Token usage threshold triggering auto-compaction of conversation history.
     pub model_auto_compact_token_limit: Option<i64>,
@@ -1316,6 +1322,7 @@ impl Config {
             model,
             review_model,
             model_context_window: cfg.model_context_window,
+            model_max_output_tokens: cfg.model_max_output_tokens,
             model_auto_compact_token_limit: cfg.model_auto_compact_token_limit,
             model_provider_id,
             model_provider,
@@ -3153,6 +3160,7 @@ model_verbosity = "high"
                 model: Some("o3".to_string()),
                 review_model: OPENAI_DEFAULT_REVIEW_MODEL.to_string(),
                 model_context_window: None,
+                model_max_output_tokens: None,
                 model_auto_compact_token_limit: None,
                 model_provider_id: "openai".to_string(),
                 model_provider: fixture.openai_provider.clone(),
@@ -3236,6 +3244,7 @@ model_verbosity = "high"
             model: Some("gpt-3.5-turbo".to_string()),
             review_model: OPENAI_DEFAULT_REVIEW_MODEL.to_string(),
             model_context_window: None,
+            model_max_output_tokens: None,
             model_auto_compact_token_limit: None,
             model_provider_id: "openai-chat-completions".to_string(),
             model_provider: fixture.openai_chat_completions_provider.clone(),
@@ -3334,6 +3343,7 @@ model_verbosity = "high"
             model: Some("o3".to_string()),
             review_model: OPENAI_DEFAULT_REVIEW_MODEL.to_string(),
             model_context_window: None,
+            model_max_output_tokens: None,
             model_auto_compact_token_limit: None,
             model_provider_id: "openai".to_string(),
             model_provider: fixture.openai_provider.clone(),
@@ -3418,6 +3428,7 @@ model_verbosity = "high"
             model: Some("gpt-5.1".to_string()),
             review_model: OPENAI_DEFAULT_REVIEW_MODEL.to_string(),
             model_context_window: None,
+            model_max_output_tokens: None,
             model_auto_compact_token_limit: None,
             model_provider_id: "openai".to_string(),
             model_provider: fixture.openai_provider.clone(),

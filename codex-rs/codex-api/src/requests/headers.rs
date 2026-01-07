@@ -1,12 +1,16 @@
 use codex_protocol::protocol::SessionSource;
 use http::HeaderMap;
 use http::HeaderValue;
+use serde_json::json;
 
 pub(crate) fn build_conversation_headers(conversation_id: Option<String>) -> HeaderMap {
     let mut headers = HeaderMap::new();
     if let Some(id) = conversation_id {
         insert_header(&mut headers, "conversation_id", &id);
         insert_header(&mut headers, "session_id", &id);
+
+        let wire_session_header = json!({ "session_id": id }).to_string();
+        insert_header(&mut headers, "extra", &wire_session_header);
     }
     headers
 }

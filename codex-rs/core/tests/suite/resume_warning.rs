@@ -37,6 +37,7 @@ fn resume_history(
 
     InitialHistory::Resumed(ResumedHistory {
         conversation_id: ConversationId::default(),
+        wire_session_id: None,
         history: vec![RolloutItem::TurnContext(turn_ctx)],
         rollout_path: rollout_path.to_path_buf(),
     })

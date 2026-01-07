@@ -134,6 +134,9 @@ pub struct ResponsesApiRequest<'a> {
     pub prompt_cache_key: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<TextControls>,
+    // Support pass max_output_tokens to avoid the incompleted issue
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_output_tokens: Option<i64>,
 }
 
 pub fn create_text_param_for_request(

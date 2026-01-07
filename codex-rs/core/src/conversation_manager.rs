@@ -20,6 +20,7 @@ use codex_protocol::ConversationId;
 use codex_protocol::items::TurnItem;
 use codex_protocol::models::ResponseItem;
 use codex_protocol::openai_models::ModelPreset;
+use codex_protocol::protocol::ForkedHistory;
 use codex_protocol::protocol::InitialHistory;
 use codex_protocol::protocol::RolloutItem;
 use codex_protocol::protocol::SessionSource;
@@ -266,6 +267,13 @@ impl ConversationManager {
 /// Return a prefix of `items` obtained by cutting strictly before the nth user message
 /// (0-based) and all items that follow it.
 fn truncate_before_nth_user_message(history: InitialHistory, n: usize) -> InitialHistory {
+    // Extract wire_session_id from history before consuming it/cloning items
+    let wire_session_id = match &history {
+        InitialHistory::New => None,
+        InitialHistory::Resumed(h) => h.wire_session_id.or(Some(h.conversation_id)),
+        InitialHistory::Forked(h) => h.wire_session_id,
+    };
+
     // Work directly on rollout items, and cut the vector at the nth user message input.
     let items: Vec<RolloutItem> = history.get_rollout_items();
 
@@ -294,7 +302,10 @@ fn truncate_before_nth_user_message(history: InitialHistory, n: usize) -> Initia
     if rolled.is_empty() {
         InitialHistory::New
     } else {
-        InitialHistory::Forked(rolled)
+        InitialHistory::Forked(ForkedHistory {
+            items: rolled,
+            wire_session_id,
+        })
     }
 }
 
@@ -358,7 +369,13 @@ mod tests {
             .cloned()
             .map(RolloutItem::ResponseItem)
             .collect();
-        let truncated = truncate_before_nth_user_message(InitialHistory::Forked(initial), 1);
+        let truncated = truncate_before_nth_user_message(
+            InitialHistory::Forked(ForkedHistory {
+                items: initial,
+                wire_session_id: None,
+            }),
+            1,
+        );
         let got_items = truncated.get_rollout_items();
         let expected_items = vec![
             RolloutItem::ResponseItem(items[0].clone()),
@@ -375,7 +392,13 @@ mod tests {
             .cloned()
             .map(RolloutItem::ResponseItem)
             .collect();
-        let truncated2 = truncate_before_nth_user_message(InitialHistory::Forked(initial2), 2);
+        let truncated2 = truncate_before_nth_user_message(
+            InitialHistory::Forked(ForkedHistory {
+                items: initial2,
+                wire_session_id: None,
+            }),
+            2,
+        );
         assert_matches!(truncated2, InitialHistory::New);
     }
 
@@ -394,7 +417,13 @@ mod tests {
             .map(RolloutItem::ResponseItem)
             .collect();
 
-        let truncated = truncate_before_nth_user_message(InitialHistory::Forked(rollout_items), 1);
+        let truncated = truncate_before_nth_user_message(
+            InitialHistory::Forked(ForkedHistory {
+                items: rollout_items,
+                wire_session_id: None,
+            }),
+            1,
+        );
         let got_items = truncated.get_rollout_items();
 
         let expected: Vec<RolloutItem> = vec![

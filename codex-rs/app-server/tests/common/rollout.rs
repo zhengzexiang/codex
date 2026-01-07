@@ -42,6 +42,7 @@ pub fn create_fake_rollout(
     // Build JSONL lines
     let meta = SessionMeta {
         id: conversation_id,
+        wire_session_id: Some(conversation_id),
         timestamp: meta_rfc3339.to_string(),
         cwd: PathBuf::from("/"),
         originator: "codex".to_string(),

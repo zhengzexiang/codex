@@ -1158,15 +1158,24 @@ pub struct ConversationPathResponseEvent {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, TS)]
 pub struct ResumedHistory {
     pub conversation_id: ConversationId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wire_session_id: Option<ConversationId>,
     pub history: Vec<RolloutItem>,
     pub rollout_path: PathBuf,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, TS)]
+pub struct ForkedHistory {
+    pub items: Vec<RolloutItem>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wire_session_id: Option<ConversationId>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, TS)]
 pub enum InitialHistory {
     New,
     Resumed(ResumedHistory),
-    Forked(Vec<RolloutItem>),
+    Forked(ForkedHistory),
 }
 
 impl InitialHistory {
@@ -1174,7 +1183,7 @@ impl InitialHistory {
         match self {
             InitialHistory::New => Vec::new(),
             InitialHistory::Resumed(resumed) => resumed.history.clone(),
-            InitialHistory::Forked(items) => items.clone(),
+            InitialHistory::Forked(forked) => forked.items.clone(),
         }
     }
 
@@ -1191,8 +1200,9 @@ impl InitialHistory {
                     })
                     .collect(),
             ),
-            InitialHistory::Forked(items) => Some(
-                items
+            InitialHistory::Forked(forked) => Some(
+                forked
+                    .items
                     .iter()
                     .filter_map(|ri| match ri {
                         RolloutItem::EventMsg(ev) => Some(ev.clone()),
@@ -1253,6 +1263,8 @@ impl fmt::Display for SubAgentSource {
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema, TS)]
 pub struct SessionMeta {
     pub id: ConversationId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wire_session_id: Option<ConversationId>,
     pub timestamp: String,
     pub cwd: PathBuf,
     pub originator: String,
@@ -1267,6 +1279,7 @@ impl Default for SessionMeta {
     fn default() -> Self {
         SessionMeta {
             id: ConversationId::default(),
+            wire_session_id: None,
             timestamp: String::new(),
             cwd: PathBuf::new(),
             originator: String::new(),

@@ -112,6 +112,7 @@ use codex_core::ConversationManager;
 use codex_core::Cursor as RolloutCursor;
 use codex_core::INTERACTIVE_SESSION_SOURCES;
 use codex_core::InitialHistory;
+use codex_core::protocol::ForkedHistory;
 use codex_core::NewConversation;
 use codex_core::RolloutRecorder;
 use codex_core::SessionMeta;
@@ -1592,7 +1593,10 @@ impl CodexMessageProcessor {
                 .await;
                 return;
             }
-            InitialHistory::Forked(history.into_iter().map(RolloutItem::ResponseItem).collect())
+            InitialHistory::Forked(ForkedHistory {
+                items: history.into_iter().map(RolloutItem::ResponseItem).collect(),
+                wire_session_id: None,
+            })
         } else if let Some(path) = path {
             match RolloutRecorder::get_rollout_history(&path).await {
                 Ok(initial_history) => initial_history,
@@ -2297,9 +2301,10 @@ impl CodexMessageProcessor {
             }
         } else {
             match history {
-                Some(history) if !history.is_empty() => InitialHistory::Forked(
-                    history.into_iter().map(RolloutItem::ResponseItem).collect(),
-                ),
+                Some(history) if !history.is_empty() => InitialHistory::Forked(ForkedHistory {
+                    items: history.into_iter().map(RolloutItem::ResponseItem).collect(),
+                    wire_session_id: None,
+                }),
                 Some(_) | None => {
                     self.send_invalid_request_error(
                         request_id,
@@ -3587,6 +3592,7 @@ mod tests {
 
         let session_meta = SessionMeta {
             id: conversation_id,
+            wire_session_id: Some(conversation_id),
             timestamp: timestamp.clone(),
             model_provider: None,
             ..SessionMeta::default()

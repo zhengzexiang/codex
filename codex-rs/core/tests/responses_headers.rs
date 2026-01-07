@@ -22,6 +22,13 @@ use futures::StreamExt;
 use tempfile::TempDir;
 use wiremock::matchers::header;
 
+// New imports for the unit test
+use codex_api::provider::{Provider, RetryConfig};
+use codex_api::requests::responses::ResponsesRequestBuilder;
+use http::HeaderMap;
+use std::time::Duration;
+use serde_json::Value;
+
 #[tokio::test]
 async fn responses_stream_includes_subagent_header_on_review() {
     core_test_support::skip_if_no_network!();
@@ -89,7 +96,8 @@ async fn responses_stream_includes_subagent_header_on_review() {
         provider,
         effort,
         summary,
-        conversation_id,
+        conversation_id.clone(),
+        conversation_id.clone(),
         session_source,
     );
 
@@ -184,7 +192,8 @@ async fn responses_stream_includes_subagent_header_on_other() {
         provider,
         effort,
         summary,
-        conversation_id,
+        conversation_id.clone(),
+        conversation_id.clone(),
         session_source,
     );
 
@@ -277,7 +286,8 @@ async fn responses_respects_model_family_overrides_from_config() {
         provider,
         effort,
         summary,
-        conversation_id,
+        conversation_id.clone(),
+        conversation_id.clone(),
         session_source,
     );
 
@@ -316,4 +326,57 @@ async fn responses_respects_model_family_overrides_from_config() {
             .and_then(|value| value.as_str()),
         Some("detailed")
     );
+}
+
+// New helper and test for wire_session_id verification
+fn make_provider() -> Provider {
+    Provider {
+        name: "test".to_string(),
+        base_url: "http://localhost".to_string(),
+        query_params: None,
+        wire: codex_api::provider::WireApi::Responses,
+        headers: HeaderMap::new(),
+        retry: RetryConfig {
+            max_attempts: 1,
+            base_delay: Duration::from_millis(10),
+            retry_429: false,
+            retry_5xx: false,
+            retry_transport: false,
+        },
+        stream_idle_timeout: Duration::from_secs(10),
+    }
+}
+
+#[test]
+fn sends_wire_session_id_in_headers_but_cache_key_in_body() {
+    let provider = make_provider();
+    let conversation_id = "conv-1";
+    let wire_session_id = "conv-orig";
+
+    // Use codex_protocol types directly for the unit test
+    let prompt = vec![codex_protocol::models::ResponseItem::Message {
+        id: None,
+        role: "user".to_string(),
+        content: vec![codex_protocol::models::ContentItem::OutputText { text: "hi".into() }],
+    }];
+
+    let req = ResponsesRequestBuilder::new("gpt-4o", "inst", &prompt)
+        .prompt_cache_key(Some(conversation_id.to_string()))
+        .conversation(Some(wire_session_id.to_string()))
+        .build(&provider)
+        .expect("build request");
+
+    // Verify Headers
+    let h = &req.headers;
+    assert_eq!(h.get("conversation_id").unwrap().to_str().unwrap(), wire_session_id);
+    assert_eq!(h.get("session_id").unwrap().to_str().unwrap(), wire_session_id);
+
+    // Verify Extra Header
+    let extra = h.get("extra").expect("extra header");
+    let extra_json: Value = serde_json::from_slice(extra.as_bytes()).expect("parse extra");
+    assert_eq!(extra_json["session_id"], wire_session_id);
+
+    // Verify Body
+    let body = req.body;
+    assert_eq!(body["prompt_cache_key"], conversation_id);
 }

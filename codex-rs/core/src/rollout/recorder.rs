@@ -53,6 +53,7 @@ pub struct RolloutRecorder {
 pub enum RolloutRecorderParams {
     Create {
         conversation_id: ConversationId,
+        wire_session_id: Option<ConversationId>,
         instructions: Option<String>,
         source: SessionSource,
     },
@@ -75,11 +76,13 @@ enum RolloutCmd {
 impl RolloutRecorderParams {
     pub fn new(
         conversation_id: ConversationId,
+        wire_session_id: Option<ConversationId>,
         instructions: Option<String>,
         source: SessionSource,
     ) -> Self {
         Self::Create {
             conversation_id,
+            wire_session_id,
             instructions,
             source,
         }
@@ -118,6 +121,7 @@ impl RolloutRecorder {
         let (file, rollout_path, meta) = match params {
             RolloutRecorderParams::Create {
                 conversation_id,
+                wire_session_id,
                 instructions,
                 source,
             } => {
@@ -141,6 +145,7 @@ impl RolloutRecorder {
                     path,
                     Some(SessionMeta {
                         id: session_id,
+                        wire_session_id,
                         timestamp,
                         cwd: config.cwd.clone(),
                         originator: originator().value.clone(),
@@ -216,6 +221,7 @@ impl RolloutRecorder {
 
         let mut items: Vec<RolloutItem> = Vec::new();
         let mut conversation_id: Option<ConversationId> = None;
+        let mut wire_session_id: Option<ConversationId> = None;
         for line in text.lines() {
             if line.trim().is_empty() {
                 continue;
@@ -236,6 +242,7 @@ impl RolloutRecorder {
                         // conversation id and main session information. Keep all items intact.
                         if conversation_id.is_none() {
                             conversation_id = Some(session_meta_line.meta.id);
+                            wire_session_id = session_meta_line.meta.wire_session_id;
                         }
                         items.push(RolloutItem::SessionMeta(session_meta_line));
                     }
@@ -273,6 +280,7 @@ impl RolloutRecorder {
         info!("Resumed rollout successfully from {path:?}");
         Ok(InitialHistory::Resumed(ResumedHistory {
             conversation_id,
+            wire_session_id,
             history: items,
             rollout_path: path.to_path_buf(),
         }))
